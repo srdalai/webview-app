@@ -1,12 +1,20 @@
 package com.sdtechnocrat.webviewapp;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 import androidx.palette.graphics.Palette;
 
+import android.Manifest;
+import android.app.DownloadManager;
 import android.app.ProgressDialog;
+import android.content.ActivityNotFoundException;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.graphics.drawable.Icon;
@@ -14,12 +22,17 @@ import android.net.Uri;
 import android.net.http.SslError;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Environment;
 import android.util.Log;
 import android.view.KeyEvent;
 import android.view.Window;
 import android.view.WindowManager;
 import android.webkit.ConsoleMessage;
+import android.webkit.DownloadListener;
+import android.webkit.MimeTypeMap;
 import android.webkit.SslErrorHandler;
+import android.webkit.URLUtil;
+import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
 import android.webkit.WebResourceError;
 import android.webkit.WebResourceRequest;
@@ -29,6 +42,8 @@ import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.Toast;
 
+import static android.content.pm.PackageManager.PERMISSION_GRANTED;
+
 public class MainActivity extends AppCompatActivity {
 
     WebView myWebView;
@@ -36,12 +51,22 @@ public class MainActivity extends AppCompatActivity {
     String currentUrl = "https://developer.android.com";
     String domain = "developer.android.com";
 
+    public static final int REQUEST_SELECT_FILE  = 100;
+
+    private ValueCallback<Uri[]> uploadMessage;
+
+    String[] permissions = new String[] {Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.WRITE_EXTERNAL_STORAGE};
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         //setContentView(R.layout.activity_main);
 
         //myWebView = findViewById(R.id.webview);
+
+        progressDialog = new ProgressDialog(this);
+        progressDialog.setMessage("Loading...");
+        showLoader();
 
         myWebView = new WebView(this);
         WebSettings webSettings = myWebView.getSettings();
@@ -52,17 +77,71 @@ public class MainActivity extends AppCompatActivity {
 
         setContentView(myWebView);
 
-        progressDialog = new ProgressDialog(this);
-        progressDialog.setMessage("Loading...");
 
-        currentUrl = "http://mgrouphostel.com";
-        domain = "mgrouphostel.com";
+        /*currentUrl = "https://mgrouphome.com";
+        domain = "mgrouphome.com";*/
+        currentUrl = getResources().getString(R.string.website_url);
+        domain = getResources().getString(R.string.website_domain);
 
+        myWebView.setDownloadListener(new DownloadListener() {
+            @Override
+            public void onDownloadStart(String url, String userAgent, String contentDisposition, String mimetype, long contentLength) {
+                Log.d("TAG", "Download URL =>\n" + url);
+                /*Intent i = new Intent(Intent.ACTION_VIEW);
+                i.setData(Uri.parse(url));
+                startActivity(i);*/
+
+                String fileExtenstion = MimeTypeMap.getFileExtensionFromUrl(url);
+                //final String filename = URLUtil.guessFileName(url, contentDisposition, mimetype);
+                final String filename = URLUtil.guessFileName(url, contentDisposition, fileExtenstion);
+
+
+                DownloadManager.Request request = new DownloadManager.Request(Uri.parse(url));
+                request.allowScanningByMediaScanner();
+                request.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED); //Notify client once download is completed!
+                request.setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, filename);
+                DownloadManager dm = (DownloadManager) getSystemService(DOWNLOAD_SERVICE);
+                dm.enqueue(request);
+                Toast.makeText(getApplicationContext(), "Downloading File", //To notify the Client that the file is being downloaded
+                        Toast.LENGTH_LONG).show();
+            }
+        });
+
+
+        /*if (ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this, permissions, 200);
+        } else {
+            myWebView.loadUrl(currentUrl);
+        }*/
         myWebView.loadUrl(currentUrl);
     }
 
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == 200) {
+            if (grantResults.length > 0 && grantResults[0] == PERMISSION_GRANTED) {
+                myWebView.loadUrl(currentUrl);
+            } else {
+                ExitActivity.exitApplication(MainActivity.this);
+                finish();
+            }
+        }
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == REQUEST_SELECT_FILE) {
+            if (uploadMessage == null) return;
+            uploadMessage.onReceiveValue(WebChromeClient.FileChooserParams.parseResult(resultCode, data));
+            uploadMessage = null;
+        }
+    }
+
     private class MyWebViewClient extends WebViewClient {
-        @Override
+        /*@Override
         public boolean shouldOverrideUrlLoading(WebView view, String url) {
             if (domain.equals(Uri.parse(url).getHost())) {
                 currentUrl = url;
@@ -73,7 +152,7 @@ public class MainActivity extends AppCompatActivity {
             Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
             startActivity(intent);
             return true;
-        }
+        }*/
 
         @Override
         public void onPageStarted(WebView view, String url, Bitmap favicon) {
@@ -123,6 +202,27 @@ public class MainActivity extends AppCompatActivity {
                 window.setStatusBarColor(color);
             }
             super.onReceivedIcon(view, icon);
+        }
+
+        public boolean onShowFileChooser(WebView webView, ValueCallback<Uri[]> filePathCallback, FileChooserParams fileChooserParams) {
+            // make sure there is no existing message
+            if (uploadMessage != null) {
+                uploadMessage.onReceiveValue(null);
+                uploadMessage = null;
+            }
+
+            uploadMessage = filePathCallback;
+
+            Intent intent = fileChooserParams.createIntent();
+            try {
+                startActivityForResult(intent, REQUEST_SELECT_FILE);
+            } catch (ActivityNotFoundException e) {
+                uploadMessage = null;
+                Toast.makeText(MainActivity.this, "Cannot open file chooser", Toast.LENGTH_LONG).show();
+                return false;
+            }
+
+            return true;
         }
     }
 
@@ -182,9 +282,12 @@ public class MainActivity extends AppCompatActivity {
             return true;
         } else if ((keyCode == KeyEvent.KEYCODE_BACK) && !myWebView.canGoBack()) {
             showExitDialog();
+            return true;
+        } else {
+            return super.onKeyDown(keyCode, event);
         }
         // If it wasn't the Back key or there's no web page history, bubble up to the default
         // system behavior (probably exit the activity)
-        return super.onKeyDown(keyCode, event);
+
     }
 }

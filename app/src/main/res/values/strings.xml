@@ -1,3 +1,6 @@
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <string name="app_name">Android Developers</string>
+    <string name="website_url">https://developer.android.com</string>
+    <string name="website_domain">developer.android.com</string>
+    <string name="loading_video" tools:ignore="ExtraTranslation">Loading video…</string>
 </resources>
