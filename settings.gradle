@@ -1,2 +1,2 @@
 include ':app'
-rootProject.name='Webview App'
+rootProject.name='WebviewApp'
