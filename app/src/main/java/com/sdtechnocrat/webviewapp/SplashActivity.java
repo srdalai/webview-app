@@ -19,16 +19,13 @@ public class SplashActivity extends AppCompatActivity {
         imageView = findViewById(R.id.imageView);
 
         //imageView.setImageDrawable(getResources().getDrawable(R.drawable.splash_image));
-        new Handler().postDelayed(new Runnable() {
-            @Override
-            public void run() {
-                if (getPackageName().equalsIgnoreCase("com.ntpl.moontvdigital")) {
-                    startActivity(new Intent(SplashActivity.this, VideoActivity.class));
-                } else {
-                    startActivity(new Intent(SplashActivity.this, MainActivity.class));
-                }
-                finish();
+        new Handler().postDelayed(() -> {
+            if (getPackageName().equalsIgnoreCase("com.ntpl.moontvdigital")) {
+                startActivity(new Intent(SplashActivity.this, VideoActivity.class));
+            } else {
+                startActivity(new Intent(SplashActivity.this, MainActivity.class));
             }
+            finish();
         }, 300);
     }
 }

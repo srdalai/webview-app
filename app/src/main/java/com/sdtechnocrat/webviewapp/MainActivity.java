@@ -1,26 +1,23 @@
 package com.sdtechnocrat.webviewapp;
 
+import androidx.activity.EdgeToEdge;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.app.ActivityCompat;
-import androidx.core.content.ContextCompat;
+import androidx.core.graphics.Insets;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowInsetsCompat;
 import androidx.palette.graphics.Palette;
 
 import android.Manifest;
 import android.app.DownloadManager;
 import android.app.ProgressDialog;
 import android.content.ActivityNotFoundException;
-import android.content.DialogInterface;
 import android.content.Intent;
-import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
-import android.graphics.Color;
-import android.graphics.drawable.Icon;
 import android.net.Uri;
 import android.net.http.SslError;
-import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.util.Log;
@@ -28,7 +25,6 @@ import android.view.KeyEvent;
 import android.view.Window;
 import android.view.WindowManager;
 import android.webkit.ConsoleMessage;
-import android.webkit.DownloadListener;
 import android.webkit.MimeTypeMap;
 import android.webkit.SslErrorHandler;
 import android.webkit.URLUtil;
@@ -59,10 +55,8 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        EdgeToEdge.enable(this);
         super.onCreate(savedInstanceState);
-        //setContentView(R.layout.activity_main);
-
-        //myWebView = findViewById(R.id.webview);
 
         progressDialog = new ProgressDialog(this);
         progressDialog.setMessage("Loading...");
@@ -76,6 +70,11 @@ public class MainActivity extends AppCompatActivity {
         myWebView.setWebChromeClient(new MyChromeWebClient());
 
         setContentView(myWebView);
+        ViewCompat.setOnApplyWindowInsetsListener(/*findViewById(R.id.main)*/myWebView, (v, insets) -> {
+            Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
+            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
+            return insets;
+        });
 
 
         /*currentUrl = "https://mgrouphome.com";
@@ -252,12 +251,9 @@ public class MainActivity extends AppCompatActivity {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         builder.setMessage(msg);
         builder.setCancelable(shouldCancel);
-        builder.setPositiveButton("Ok", new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface dialog, int which) {
-                myWebView.loadUrl(currentUrl);
-                dialog.dismiss();
-            }
+        builder.setPositiveButton("Ok", (dialog, which) -> {
+            myWebView.loadUrl(currentUrl);
+            dialog.dismiss();
         });
         builder.create().show();
     }
@@ -265,14 +261,11 @@ public class MainActivity extends AppCompatActivity {
     private void showExitDialog() {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         builder.setMessage("Do you want to close the app?");
-        builder.setPositiveButton("Yes", new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface dialog, int which) {
-                dialog.dismiss();
-                //finishAffinity();
-                ExitActivity.exitApplication(MainActivity.this);
-                finish();
-            }
+        builder.setPositiveButton("Yes", (dialog, which) -> {
+            dialog.dismiss();
+            //finishAffinity();
+            ExitActivity.exitApplication(MainActivity.this);
+            finish();
         });
         builder.setNegativeButton("No", null);
         builder.create().show();

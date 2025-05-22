@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Beverages Management System</string>
+    <string name="website_url">https://bms.biisoftech.com</string>
+    <string name="website_domain">bms.biisoftech.com</string>
+</resources>
