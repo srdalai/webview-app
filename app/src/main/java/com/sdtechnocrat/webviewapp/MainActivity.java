@@ -83,30 +83,25 @@ public class MainActivity extends AppCompatActivity {
         currentUrl = getResources().getString(R.string.website_url);
         domain = getResources().getString(R.string.website_domain);
 
-        myWebView.setDownloadListener(new DownloadListener() {
-            @Override
-            public void onDownloadStart(String url, String userAgent, String contentDisposition, String mimetype, long contentLength) {
-                Log.d("TAG", "Download URL =>\n" + url);
-                /*Intent i = new Intent(Intent.ACTION_VIEW);
-                i.setData(Uri.parse(url));
-                startActivity(i);*/
+        myWebView.setDownloadListener((url, userAgent, contentDisposition, mimetype, contentLength) -> {
+            Log.d("TAG", "Download URL =>\n" + url);
+            /*Intent i = new Intent(Intent.ACTION_VIEW);
+            i.setData(Uri.parse(url));
+            startActivity(i);*/
 
-                String fileExtenstion = MimeTypeMap.getFileExtensionFromUrl(url);
-                //final String filename = URLUtil.guessFileName(url, contentDisposition, mimetype);
-                final String filename = URLUtil.guessFileName(url, contentDisposition, fileExtenstion);
+            String fileExtension = MimeTypeMap.getFileExtensionFromUrl(url);
+            //final String filename = URLUtil.guessFileName(url, contentDisposition, mimetype);
+            final String filename = URLUtil.guessFileName(url, contentDisposition, fileExtension);
 
 
-                DownloadManager.Request request = new DownloadManager.Request(Uri.parse(url));
-                request.allowScanningByMediaScanner();
-                request.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED); //Notify client once download is completed!
-                request.setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, filename);
-                DownloadManager dm = (DownloadManager) getSystemService(DOWNLOAD_SERVICE);
-                dm.enqueue(request);
-                Toast.makeText(getApplicationContext(), "Downloading File", //To notify the Client that the file is being downloaded
-                        Toast.LENGTH_LONG).show();
-            }
+            DownloadManager.Request request = new DownloadManager.Request(Uri.parse(url));
+            request.allowScanningByMediaScanner();
+            request.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED); //Notify client once download is completed!
+            request.setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, filename);
+            DownloadManager dm = (DownloadManager) getSystemService(DOWNLOAD_SERVICE);
+            dm.enqueue(request);
+            Toast.makeText(getApplicationContext(), "Downloading File", Toast.LENGTH_LONG).show();//To notify the Client that the file is being downloaded
         });
-
 
         /*if (ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(this, permissions, 200);
@@ -155,6 +150,17 @@ public class MainActivity extends AppCompatActivity {
         }*/
 
         @Override
+        public boolean shouldOverrideUrlLoading(WebView view, String url) {
+            Log.d("URL", url);
+            if (url.contains("tel:")) {     // If it is a tel: URL
+                Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
+                startActivity(intent);
+                return true;
+            }
+            return false;
+        }
+
+        @Override
         public void onPageStarted(WebView view, String url, Bitmap favicon) {
             showLoader();
             super.onPageStarted(view, url, favicon);
@@ -196,11 +202,9 @@ public class MainActivity extends AppCompatActivity {
         public void onReceivedIcon(WebView view, Bitmap icon) {
             int color = createPaletteSync(icon).getDominantColor(0xffffff);
             Log.d("Dominant Color", String.valueOf(color));
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                Window window = getWindow();
-                window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS);
-                window.setStatusBarColor(color);
-            }
+            Window window = getWindow();
+            window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS);
+            window.setStatusBarColor(color);
             super.onReceivedIcon(view, icon);
         }
 
